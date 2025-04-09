@@ -1,29 +1,32 @@
-# dualTIRF_Analysis
+# dualTIRF_Analysis 4
 
 ## Overview
-`dualTIRF_Analysis.py` is a Python script designed for analyzing trajectories from dual Total Internal Reflection Fluorescence (TIRF) microscopy data. The script processes CSV files containing track and spot statistics, calculates various metrics such as Mean Squared Displacement (MSD), diffusion coefficients, and intensity values, and generates plots and summary statistics.
+
+`dualTIRF_Analysis 4.py` is a Python script designed for analyzing trajectories and intensity values from dual-color Total Internal Reflection Fluorescence (TIRF) microscopy data. The script processes CSV files containing track data, identifies overlapping trajectories, calculates various metrics, and generates plots and summary statistics.
 
 ## Features
-- **Trajectory Analysis**: Calculates MSD, diffusion coefficients, alpha values, and sMSS for trajectories.
-- **Intensity Analysis**: Computes mean intensity values and background-subtracted intensity for specified spot ranges.
-- **Overlap Detection**: Identifies overlapping tracks between two channels (Rojo and Verde) based on spatial and temporal proximity.
-- **Plot Generation**: Creates plots for position vs. frame and intensity vs. frame for overlapping tracks.
-- **CSV Processing**: Updates CSV files with new columns and saves results to separate files.
-- **Parallel Processing**: Utilizes `ThreadPoolExecutor` for parallel analysis of trajectories.
 
-## Dependencies
-- `os`
-- `pandas`
-- `concurrent.futures`
-- `matplotlib`
-- `mpl_toolkits.mplot3d`
-- `numpy`
-- `skimage`
-- `PIL`
-- `decimal`
+- **Plotting Overlapping Tracks**: Generates plots for the mean intensity of two different tracks (Rojo and Verde) against the frame number, including background intensity values.
+- **Mean Squared Displacement (MSD) Calculations**: Computes MSD, alpha values, and diffusion coefficients for trajectories.
+- **Trajectory Analysis**: Processes CSV files, identifies overlapping trajectories, and calculates metrics such as MSD, alpha values, diffusion coefficients, and mean intensities.
+- **CSV File Handling**: Locates and reads CSV files, updates them with new columns, and extracts specific column values for summary analysis.
+- **Parallel Processing**: Analyzes trajectories in parallel to improve efficiency.
+- **Directory Management**: Creates directories for storing results, plots, and summary analyses.
+- **Summary Data Generation**: Compiles summary data for overlapping and non-overlapping tracks and saves it to CSV files.
+
+## Requirements
+
+- Python 3.x
+- pandas
+- numpy
+- matplotlib
+- scikit-image
+- Pillow
 
 ## Installation
-To use this script, ensure you have the required dependencies installed. You can install them using pip:
 
-```bash
-pip install pandas matplotlib numpy scikit-image pillow
+1. Clone the repository or download the script.
+2. Install the required Python packages using pip:
+   ```bash
+   pip install pandas numpy matplotlib scikit-image Pillow
+   ```
