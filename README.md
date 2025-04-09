@@ -2,7 +2,7 @@
 
 ## Overview
 
-`dualTIRF_Analysis 4.py` is a Python script designed for analyzing trajectories and intensity values from dual-color Total Internal Reflection Fluorescence (TIRF) microscopy data. The script processes CSV files containing track data, identifies overlapping trajectories, calculates various metrics, and generates plots and summary statistics.
+`dualTIRF_Analysis.py` is a Python script designed for analyzing trajectories and intensity values from dual-color Total Internal Reflection Fluorescence (TIRF) microscopy data. The script processes CSV files containing track data, identifies overlapping trajectories, calculates various metrics, and generates plots and summary statistics.
 
 ## Features
 
