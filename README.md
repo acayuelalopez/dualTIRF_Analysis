@@ -1,4 +1,4 @@
-# dualTIRF_Analysis 4
+# dualTIRF_Analysis
 
 ## Overview
 
