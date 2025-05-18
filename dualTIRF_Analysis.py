@@ -411,7 +411,7 @@ def extract_column_values_single_file(column_indexes_no_overlap, column_indexes_
                 column_values_dict_verde_no_overlap[index].append(verde_tracks_df.iloc[:, index].values.tolist())
 
             # Extraer valores para columnas especificadas (overlapping)
-            results_file_path = os.path.join(csv_directory, f'{image_name}_trajectory_overlap_results.csv')
+            results_file_path = os.path.join(csv_directory, f'{image_name}_recalculated_trajectory_overlap_results.csv')
             results_df = pd.read_csv(results_file_path)
             for index in column_indexes_overlap:
                 column_values_dict_rojo_overlap[index].append(results_df.iloc[:, index].values.tolist())
@@ -452,6 +452,38 @@ def extract_column_values_single_file(column_indexes_no_overlap, column_indexes_
         df_verde_overlap.columns = image_names
         df_verde_overlap.to_csv(output_file_verde_overlap, index=False)
 
+    # Guardar también archivos con una sola columna y filas vacías entre imágenes
+    for index in column_indexes_no_overlap:
+        column_name = rojo_tracks_df.columns[index]
+
+        # Rojo No Overlap - 1 columna
+        output_file_rojo_no_overlap_1col = os.path.join(summary_analysis_directory,
+            f'{column_name}_rojo_No_overlap_Track_statistics_1column.csv')
+        values_rojo = [item for sublist in column_values_dict_rojo_no_overlap[index] for item in sublist + [""]]
+        pd.DataFrame(values_rojo, columns=[column_name]).to_csv(output_file_rojo_no_overlap_1col, index=False)
+
+        # Verde No Overlap - 1 columna
+        output_file_verde_no_overlap_1col = os.path.join(summary_analysis_directory,
+            f'{column_name}_verde_No_overlap_Track_statistics_1column.csv')
+        values_verde = [item for sublist in column_values_dict_verde_no_overlap[index] for item in sublist + [""]]
+        pd.DataFrame(values_verde, columns=[column_name]).to_csv(output_file_verde_no_overlap_1col, index=False)
+
+    for index in column_indexes_overlap:
+        column_name = results_df.columns[index]
+
+        # Rojo Overlap - 1 columna
+        output_file_rojo_overlap_1col = os.path.join(summary_analysis_directory,
+            f'{column_name}_rojo_overlap_Track_statistics_1column.csv')
+        values_rojo = [item for sublist in column_values_dict_rojo_overlap[index] for item in sublist + [""]]
+        pd.DataFrame(values_rojo, columns=[column_name]).to_csv(output_file_rojo_overlap_1col, index=False)
+
+        # Verde Overlap - 1 columna
+        output_file_verde_overlap_1col = os.path.join(summary_analysis_directory,
+            f'{column_name}_verde_overlap_Track_statistics_1column.csv')
+        values_verde = [item for sublist in column_values_dict_verde_overlap[index] for item in sublist + [""]]
+        pd.DataFrame(values_verde, columns=[column_name]).to_csv(output_file_verde_overlap_1col, index=False)
+
+
 
 
 # Save each result to a separate CSV file with the image name before 'trajectory_overlap_results.csv'
@@ -468,9 +500,24 @@ for image_name, file_results in results_spots.items():
     plots_directory = os.path.join(image_directory, "plots")
     os.makedirs(plots_directory, exist_ok=True)
 
+    # Guardar archivo general
     results_df = pd.DataFrame(file_results)
-    results_file_path = os.path.join(csv_directory, f'{image_name}_trajectory_overlap_results.csv')
+    results_file_path = os.path.join(csv_directory, f'{image_name}_recalculated_trajectory_overlap_results.csv')
     results_df.to_csv(results_file_path, index=False)
+
+    # Crear y guardar archivo solo con columnas 'Rojo' + 'Image Title'
+    rojo_columns = [col for col in results_df.columns if 'Rojo' in col or col == 'Image Title']
+    results_df_rojo = results_df[rojo_columns]
+    results_file_path_rojo = os.path.join(csv_directory,
+                                          f'{image_name}_rojo_recalculated_trajectory_overlap_results.csv')
+    results_df_rojo.to_csv(results_file_path_rojo, index=False)
+
+    # Crear y guardar archivo solo con columnas 'Verde' + 'Image Title'
+    verde_columns = [col for col in results_df.columns if 'Verde' in col or col == 'Image Title']
+    results_df_verde = results_df[verde_columns]
+    results_file_path_verde = os.path.join(csv_directory,
+                                           f'{image_name}_verde_recalculated_trajectory_overlap_results.csv')
+    results_df_verde.to_csv(results_file_path_verde, index=False)
 
     # Collect summary data per image
     n_overlapping_tracks = len(file_results)
@@ -682,4 +729,94 @@ for image_name in rojo_csv_files_tracks:
 
 # Extract specified column values and save to CSV
 extract_column_values_single_file(column_indexes_no_overlap, column_indexes_overlap)
+
+
+
+def create_summary_csv(results_spots, rojo_dfs_spots, verde_dfs_spots, summary_analysis_directory):
+    summary_data_rojo = []
+    summary_data_verde = []
+
+    for image_name, file_results in results_spots.items():
+        results_file_path = os.path.join(results_directory, image_name, "csv", f'{image_name}_recalculated_trajectory_overlap_results.csv')
+        results_df = pd.read_csv(results_file_path)
+
+        total_tracks = len(results_df)
+        n_overlapping_tracks = len(file_results)
+        n_red_tracks_overlapping = len(set([result['Rojo_TRACK_ID'] for result in file_results]))
+        n_green_tracks_overlapping = len(set([result['Verde_TRACK_ID'] for result in file_results]))
+
+        rojo_classification_counts = {
+            'Short Tracks': 0, 'Short Inmobile': 0, 'Short Confined': 0, 'Short Anomalous': 0,
+            'Short Free': 0, 'Short Directed': 0, 'Long Confined': 0, 'Long Free': 0,
+            'Long Directed': 0, 'Long Mobile': 0, 'Long Mobile Confined': 0, 'Long Mobile Free': 0,
+            'Long Mobile Directed': 0, 'Immob': 0
+        }
+        verde_classification_counts = rojo_classification_counts.copy()
+
+        for _, row in results_df.iterrows():
+            if row['Track Length Rojo'] == 'Short':
+                rojo_classification_counts['Short Tracks'] += 1
+                if row['Motility Rojo'] == 'Inmobile':
+                    rojo_classification_counts['Short Inmobile'] += 1
+                rojo_classification_counts[f"Short {row['Alpha Movement Rojo']}"] += 1
+            else:
+                rojo_classification_counts[f"Long {row['sMSS Rojo Movement']}"] += 1
+                if row['Motility Rojo'] == 'Mobile':
+                    rojo_classification_counts['Long Mobile'] += 1
+                    rojo_classification_counts[f"Long Mobile {row['sMSS Rojo Movement']}"] += 1
+                elif row['Motility Rojo'] == 'Inmobile':
+                    rojo_classification_counts['Immob'] += 1
+
+            if row['Track Length Verde'] == 'Short':
+                verde_classification_counts['Short Tracks'] += 1
+                if row['Motility Verde'] == 'Inmobile':
+                    verde_classification_counts['Short Inmobile'] += 1
+                verde_classification_counts[f"Short {row['Alpha Movement Verde']}"] += 1
+            else:
+                verde_classification_counts[f"Long {row['sMSS Verde Movement']}"] += 1
+                if row['Motility Verde'] == 'Mobile':
+                    verde_classification_counts['Long Mobile'] += 1
+                    verde_classification_counts[f"Long Mobile {row['sMSS Verde Movement']}"] += 1
+                elif row['Motility Verde'] == 'Inmobile':
+                    verde_classification_counts['Immob'] += 1
+
+        summary_data_rojo.append({
+            'Image Title': image_name,
+            'Total Tracks': total_tracks,
+            'N of Overlapping Tracks': n_overlapping_tracks,
+            'N of Red Tracks overlapping': n_red_tracks_overlapping,
+            **rojo_classification_counts
+        })
+
+        summary_data_verde.append({
+            'Image Title': image_name,
+            'Total Tracks': total_tracks,
+            'N of Overlapping Tracks': n_overlapping_tracks,
+            'N of Green Tracks overlapping': n_green_tracks_overlapping,
+            **verde_classification_counts
+        })
+
+    # Crear DataFrames
+    summary_df_rojo = pd.DataFrame(summary_data_rojo)
+    summary_df_verde = pd.DataFrame(summary_data_verde)
+
+    # Añadir fila 'Total' al final
+    total_row_rojo = summary_df_rojo.drop(columns=['Image Title']).sum(numeric_only=True)
+    total_row_rojo['Image Title'] = 'Total'
+    summary_df_rojo = pd.concat([summary_df_rojo, pd.DataFrame([total_row_rojo])], ignore_index=True)
+
+    total_row_verde = summary_df_verde.drop(columns=['Image Title']).sum(numeric_only=True)
+    total_row_verde['Image Title'] = 'Total'
+    summary_df_verde = pd.concat([summary_df_verde, pd.DataFrame([total_row_verde])], ignore_index=True)
+
+    # Guardar los archivos
+    summary_df_rojo.to_csv(os.path.join(summary_analysis_directory, 'summary_track_condition_rojo_overlapping.csv'),
+                           index=False)
+    summary_df_verde.to_csv(os.path.join(summary_analysis_directory, 'summary_track_condition_verde_overlapping.csv'),
+                            index=False)
+
+
+# Ejecutar al final del script
+create_summary_csv(results_spots, rojo_dfs_spots, verde_dfs_spots, summary_analysis_directory)
+
 
