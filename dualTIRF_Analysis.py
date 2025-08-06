@@ -308,16 +308,17 @@ def analyze_trajectories(image_name, rojo_file, verde_file, distancia_x, distanc
                         'Motility Verde': verde_motility,
                         'Spot Intensity-Bg Rojo': spot_intensity_bg_subtract_rojo.mean(),
                         'Intensity-Bg Rojo': intensity_bg_subtract_rojo.mean(),
-                        'Intensity-Bg (' + str(spot_range_min) + '-' + str(
-                            spot_range_max) + ') Rojo': intensity_bg_subtract_range_rojo,
                         'Spot Intensity-Bg (' + str(spot_range_min) + '-' + str(
                             spot_range_max) + ') Rojo': spot_intensity_bg_subtract_range_rojo,
+                        'Intensity-Bg (' + str(spot_range_min) + '-' + str(
+                            spot_range_max) + ') Rojo': intensity_bg_subtract_range_rojo,
                         'Spot Intensity-Bg Verde': spot_intensity_bg_subtract_verde.mean(),
                         'Intensity-Bg Verde': intensity_bg_subtract_verde.mean(),
-                        'Intensity-Bg (' + str(spot_range_min) + '-' + str(
-                            spot_range_max) + ') Verde': intensity_bg_subtract_range_verde,
                         'Spot Intensity-Bg (' + str(spot_range_min) + '-' + str(
-                            spot_range_max) + ') Verde': spot_intensity_bg_subtract_range_verde
+                            spot_range_max) + ') Verde': spot_intensity_bg_subtract_range_verde,
+                        'Intensity-Bg (' + str(spot_range_min) + '-' + str(
+                            spot_range_max) + ') Verde': intensity_bg_subtract_range_verde
+
                     })
     return image_name, file_results, rojo_df, verde_df
 
@@ -338,18 +339,25 @@ motility_threshold = float(input("Please enter the D1-4 motility threshold (defa
 # Get the column indexes for summary from the user
 column_indexes_no_overlap_input = input(
     "Get the column indexes (numeric numbers from 0) for No Overlapping summary (default 33,35): ")
-column_indexes_overlap_input = input(
-    "Get the column indexes (numeric numbers from 0) for Overlapping summary (default 33,35): ")
+column_indexes_overlap_input_rojo = input("Get the column indexes for Overlapping summary ROJO (default 33,35): ")
+column_indexes_overlap_input_verde = input("Get the column indexes for Overlapping summary VERDE (default 33,35): ")
+
 
 if column_indexes_no_overlap_input:
     column_indexes_no_overlap = list(map(int, column_indexes_no_overlap_input.split(',')))
 else:
     column_indexes_no_overlap = [33, 35]
 
-if column_indexes_overlap_input:
-    column_indexes_overlap = list(map(int, column_indexes_overlap_input.split(',')))
+if column_indexes_overlap_input_rojo:
+    column_indexes_overlap_rojo = list(map(int, column_indexes_overlap_input_rojo.split(',')))
 else:
-    column_indexes_overlap = [33, 35]
+    column_indexes_overlap_rojo = [33, 35]
+
+if column_indexes_overlap_input_verde:
+    column_indexes_overlap_verde = list(map(int, column_indexes_overlap_input_verde.split(',')))
+else:
+    column_indexes_overlap_verde = [33, 35]
+
 
 # Find the CSV and TIF files
 rojo_csv_files_spots, verde_csv_files_spots, rojo_csv_files_tracks, verde_csv_files_tracks = find_csv(
@@ -390,34 +398,39 @@ os.makedirs(summary_analysis_directory, exist_ok=True)
 print(f"Directory 'Summary_Analysis' created successfully in {results_directory}.")
 
 
-# Función para extraer valores de columnas y guardar en archivos CSV separados
-def extract_column_values_single_file(column_indexes_no_overlap, column_indexes_overlap):
-    # Crear diccionarios para almacenar valores de columnas para cada imagen
+def extract_column_values_single_file(column_indexes_no_overlap, column_indexes_overlap_rojo, column_indexes_overlap_verde):
+
     column_values_dict_rojo_no_overlap = {index: [] for index in column_indexes_no_overlap}
-    column_values_dict_rojo_overlap = {index: [] for index in column_indexes_overlap}
     column_values_dict_verde_no_overlap = {index: [] for index in column_indexes_no_overlap}
-    column_values_dict_verde_overlap = {index: [] for index in column_indexes_overlap}
+    column_values_dict_rojo_overlap = {index: [] for index in column_indexes_overlap_rojo}
+    column_values_dict_verde_overlap = {index: [] for index in column_indexes_overlap_verde}
+
     image_names = []
 
-    # Iterar a través de cada imagen y extraer valores de columnas
     for image_name in rojo_csv_files_tracks:
         if image_name in verde_csv_files_tracks:
+
+            csv_directory = os.path.join(results_directory, image_name, "csv")
             rojo_tracks_df = pd.read_csv(rojo_csv_files_tracks[image_name])
             verde_tracks_df = pd.read_csv(verde_csv_files_tracks[image_name])
 
-            # Extraer valores para columnas especificadas (no overlapping)
             for index in column_indexes_no_overlap:
                 column_values_dict_rojo_no_overlap[index].append(rojo_tracks_df.iloc[:, index].values.tolist())
                 column_values_dict_verde_no_overlap[index].append(verde_tracks_df.iloc[:, index].values.tolist())
 
-            # Extraer valores para columnas especificadas (overlapping)
             results_file_path = os.path.join(csv_directory, f'{image_name}_recalculated_trajectory_overlap_results.csv')
             results_df = pd.read_csv(results_file_path)
-            for index in column_indexes_overlap:
+
+            # Para ROJO
+            for index in column_indexes_overlap_rojo:
                 column_values_dict_rojo_overlap[index].append(results_df.iloc[:, index].values.tolist())
+
+            # Para VERDE
+            for index in column_indexes_overlap_verde:
                 column_values_dict_verde_overlap[index].append(results_df.iloc[:, index].values.tolist())
 
             image_names.append(image_name)
+
 
     # Guardar valores de cada columna en archivos CSV separados
     for index in column_indexes_no_overlap:
@@ -436,16 +449,18 @@ def extract_column_values_single_file(column_indexes_no_overlap, column_indexes_
         df_verde_no_overlap.columns = image_names
         df_verde_no_overlap.to_csv(output_file_verde_no_overlap, index=False)
 
-    for index in column_indexes_overlap:
+    # Rojo Overlap
+    for index in column_indexes_overlap_rojo:
         column_name = results_df.columns[index]
-        # Rojo Overlap
         output_file_rojo_overlap = os.path.join(summary_analysis_directory,
                                                 f'{column_name}_rojo_overlap_Track_statistics.csv')
         df_rojo_overlap = pd.DataFrame(column_values_dict_rojo_overlap[index]).transpose()
         df_rojo_overlap.columns = image_names
         df_rojo_overlap.to_csv(output_file_rojo_overlap, index=False)
 
-        # Verde Overlap
+    # Verde Overlap
+    for index in column_indexes_overlap_verde:
+        column_name = results_df.columns[index]
         output_file_verde_overlap = os.path.join(summary_analysis_directory,
                                                  f'{column_name}_verde_overlap_Track_statistics.csv')
         df_verde_overlap = pd.DataFrame(column_values_dict_verde_overlap[index]).transpose()
@@ -468,22 +483,21 @@ def extract_column_values_single_file(column_indexes_no_overlap, column_indexes_
         values_verde = [item for sublist in column_values_dict_verde_no_overlap[index] for item in sublist + [""]]
         pd.DataFrame(values_verde, columns=[column_name]).to_csv(output_file_verde_no_overlap_1col, index=False)
 
-    for index in column_indexes_overlap:
+    # Rojo Overlap - 1 columna
+    for index in column_indexes_overlap_rojo:
         column_name = results_df.columns[index]
-
-        # Rojo Overlap - 1 columna
         output_file_rojo_overlap_1col = os.path.join(summary_analysis_directory,
-            f'{column_name}_rojo_overlap_Track_statistics_1column.csv')
+                                                     f'{column_name}_rojo_overlap_Track_statistics_1column.csv')
         values_rojo = [item for sublist in column_values_dict_rojo_overlap[index] for item in sublist + [""]]
         pd.DataFrame(values_rojo, columns=[column_name]).to_csv(output_file_rojo_overlap_1col, index=False)
 
-        # Verde Overlap - 1 columna
+    # Verde Overlap - 1 columna
+    for index in column_indexes_overlap_verde:
+        column_name = results_df.columns[index]
         output_file_verde_overlap_1col = os.path.join(summary_analysis_directory,
-            f'{column_name}_verde_overlap_Track_statistics_1column.csv')
+                                                      f'{column_name}_verde_overlap_Track_statistics_1column.csv')
         values_verde = [item for sublist in column_values_dict_verde_overlap[index] for item in sublist + [""]]
         pd.DataFrame(values_verde, columns=[column_name]).to_csv(output_file_verde_overlap_1col, index=False)
-
-
 
 
 # Save each result to a separate CSV file with the image name before 'trajectory_overlap_results.csv'
@@ -728,7 +742,7 @@ for image_name in rojo_csv_files_tracks:
         verde_overlap_track_file = os.path.join(csv_directory, f'{image_name}_verde_overlap_Track_statistics.csv')
 
 # Extract specified column values and save to CSV
-extract_column_values_single_file(column_indexes_no_overlap, column_indexes_overlap)
+extract_column_values_single_file(column_indexes_no_overlap, column_indexes_overlap_rojo, column_indexes_overlap_verde)
 
 
 
